@@ -1,0 +1,60 @@
+diff --git a/reduce-font.c b/reduce-font.c
+index aa0b744..7f9809f 100644
+--- a/reduce-font.c
++++ b/reduce-font.c
+@@ -39,7 +39,7 @@ test (u_int32_t x)
+     for (i = 0 ; i < 32 ; x <<= 1, ++i)
+         putchar (x & 0x80000000 ? '1' : '0');
+ 
+-    printf (": %d\n", l);
++    printf (": %zu\n", l);
+ }
+ 
+ int
+@@ -57,7 +57,7 @@ main (int argc, char **argv)
+     
+     fprintf (stderr, "setlocale: %s\n", locale);
+ #if 1
+-    fprintf (stderr, "FYI: MB_CUR_MAX/MB_LEN_MAX: %d/%d\n", MB_CUR_MAX, MB_LEN_MAX);
++    fprintf (stderr, "FYI: MB_CUR_MAX/MB_LEN_MAX: %zu/%d\n", MB_CUR_MAX, MB_LEN_MAX);
+ #endif
+     if (argc != 2)
+         usage ();
+@@ -89,16 +89,16 @@ main (int argc, char **argv)
+             switch (got = mbrtowc (&wc, buffer, avail, &wstate))
+             {
+                 case -1:    /* An error occured */
+-                    fprintf (stderr, "error -1 at position %ld (bytes: %d %*.*s)\n", pos, avail, avail, avail, buffer);
++                    fprintf (stderr, "error -1 at position %ld (bytes: %zu %*.*s)\n", pos, avail, (int) avail, (int) avail, buffer);
+ 		    error = 1;
+                     break;
+ 
+                 case -2:
+-                    fprintf (stderr, "-2: bytes: %d %*.*s\n", avail, avail, avail, buffer);
++                    fprintf (stderr, "-2: bytes: %zu %*.*s\n", avail, (int) avail, (int) avail, buffer);
+                     continue;
+ 
+                 case 0:     /* Nothing's read so far */
+-                    fprintf (stderr, "0: bytes: %d %*.*s\n", avail, avail, avail, buffer);
++                    fprintf (stderr, "0: bytes: %zu %*.*s\n", avail, (int) avail, (int) avail, buffer);
+                     continue;
+ 
+                 default:    /* Seems to read something reasonable */
+@@ -131,7 +131,7 @@ main (int argc, char **argv)
+         for (chars = 0, i = 0 ; i < BITS_NO ; ++i)
+             chars += bits (used[i]);
+ 
+-        fprintf (stderr, "Used chars: %d (%d processed)\n", chars, pos);
++        fprintf (stderr, "Used chars: %zu (%zu processed)\n", chars, pos);
+ #if 1
+         {
+             char *buf = (char *)malloc (1024);
+@@ -142,7 +142,7 @@ main (int argc, char **argv)
+                 if (header)
+                 {
+                     if (strncmp (buf, "CHARS ", 6) == 0)
+-                        printf ("CHARS %d\n", chars);
++                        printf ("CHARS %zu\n", chars);
+                     else if (strncmp (buf, "STARTCHAR ", 10) == 0)
+                         header = 0;
+                     else

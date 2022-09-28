@@ -1,0 +1,36 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+include /usr/share/dpkg/architecture.mk
+
+override_dh_auto_build:
+	mkdir -p build-udeb
+	(cd build-udeb ; ln -sf ../* .)
+	rm -f build-udeb/Makefile
+	sed -e 's/-O2/-Os/' < Makefile > build-udeb/Makefile
+
+	$(MAKE) -C build-udeb depend
+	$(MAKE) -C build-udeb
+
+	mkdir -p build
+	(cd build ; ln -sf ../* .)
+
+	$(MAKE) -C build depend
+	$(MAKE) -C build
+
+override_dh_auto_clean:
+	rm -fr build build-udeb
+	$(MAKE) clean
+
+override_dh_auto_install:
+	$(MAKE) -C build install DESTDIR=$(CURDIR)/debian/tmp
+ifeq ($(DEB_HOST_ARCH_OS), linux)
+	mkdir $(CURDIR)/debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)
+	mv $(CURDIR)/debian/tmp/usr/lib/lib* $(CURDIR)/debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)
+	install -d debian/bogl-bterm-udeb/usr/bin
+	install -m 755 build-udeb/bterm debian/bogl-bterm-udeb/usr/bin/bterm
+	install -d debian/bogl-bterm-udeb/usr/share/terminfo/b
+	install -m 644 /usr/share/terminfo/b/bterm debian/bogl-bterm-udeb/usr/share/terminfo/b/bterm
+endif

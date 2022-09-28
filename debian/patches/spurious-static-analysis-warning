@@ -1,0 +1,24 @@
+bdftobogl.c: Rework to avoid letting static analyzers think there's a bug
+(Closes: Bug#737606).
+
+diff --git a/bdftobogl.c b/bdftobogl.c
+index 538498e..80fda82 100644
+--- a/bdftobogl.c
++++ b/bdftobogl.c
+@@ -96,13 +96,13 @@ main (int argc, char *argv[])
+   printf ("static int _%s_index[%d] = {\n", font->name, index_size);
+   i = 0;
+   while (i < index_size)
+-    if (font->index[i] != 0 && i < index_size - 1)
++    if (font->index[i] == 0)
++      printf ("  %d,\n", font->index[i++]);
++    else if (i < index_size - 1)
+       {
+ 	printf ("  0x%x, %d,\n", font->index[i], font->index[i+1]);
+ 	i += 2;
+       }
+-    else if (font->index[i] == 0)
+-      printf ("  %d,\n", font->index[i++]);
+     else
+       printf ("  %d, /* Hm... */\n", font->index[i++]);
+   printf ("};\n");

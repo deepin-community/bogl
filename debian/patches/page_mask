@@ -1,0 +1,26 @@
+PAGE_MASK no longer defined on all arches.
+
+diff --git a/bogl.c b/bogl.c
+index 5b3a9f0..06a20f5 100644
+--- a/bogl.c
++++ b/bogl.c
+@@ -40,9 +40,11 @@
+ #include <termios.h>
+ #include <unistd.h>
+ 
++#if 0 /* stopped being safe.. */
+ /* Yes, I know, we shouldn't be including headers from the kernel.  But
+    XFree86 also uses this one (to get PAGE_MASK) so it's probably safe.  */
+ #include <asm/page.h>
++#endif
+ 
+ #include "bogl.h"
+ #include "boglP.h"
+@@ -112,6 +114,7 @@ bogl_init (void)
+   unsigned long bogl_frame_offset, bogl_frame_len;
+   struct fb_var_screeninfo fb_var;
+   struct vt_stat vts;
++  int PAGE_MASK = ~(sysconf(_SC_PAGESIZE) - 1);
+ 
+   assert (status < 2);
+   visible = 1;

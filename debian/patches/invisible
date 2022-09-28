@@ -1,0 +1,43 @@
+commit 3fc8696fc20129bd1e7ba4f337aa82e834c10a05
+Author: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Date:   Wed Aug 19 01:37:21 2015 +0200
+
+    Do not print invisible characters, ZWSP for Persian notably
+
+--- a/bogl-term.c
++++ b/bogl-term.c
+@@ -203,6 +203,19 @@ cursor_down (struct bogl_term *term)
+     }
+ }
+ 
++static int
++printable (wchar_t wc)
++{
++  return (iswprint(wc) &&
++      /* Invisible characters */
++      (iswspace (wc) ||
++       !(wc >= 0x2000 && wc <= 0x200F ||
++         wc >= 0x2028 && wc <= 0x202F ||
++         wc >= 0x205F && wc <= 0x206F ||
++         wc == 0xFEFF ||
++         wc >= 0xE0000 && wc <= 0xE007F)));
++}
++
+ static void
+ put_char (struct bogl_term *term, int x, int y, wchar_t wc, wchar_t *cchars,
+ 	  int fg, int bg, int ul, int bd)
+@@ -219,12 +232,14 @@ put_char (struct bogl_term *term, int x,
+ 
+     if (bogl_in_font (term->font, wc))
+     {
++        if (printable(wc))
+         bogl_text (XPOS(x), YPOS(y), buf, k, fg, bg, ul, term->font);
+ 
+         if (cchars)
+             for (j = 0; cchars[j]; j++)
+             {
+                 wctomb(0, 0);
++                if (printable(cchars[j]))
+                 if ((k = wctomb(buf, cchars[j])) != -1)
+                 bogl_text(XPOS(x), YPOS(y), buf, k, fg, -1, ul, term->font);
+             }

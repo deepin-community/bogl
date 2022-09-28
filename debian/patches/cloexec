@@ -1,0 +1,167 @@
+* Close-on-exec internal fds. (Closes: #512657).
+  + Thanks to Colin Watson for the patch.
+
+diff --git a/bogl-bgf.c b/bogl-bgf.c
+index bb48cd8..1032028 100644
+--- a/bogl-bgf.c
++++ b/bogl-bgf.c
+@@ -7,6 +7,7 @@
+ #include <unistd.h>
+ 
+ #include "bogl.h"
++#include "boglP.h"
+ #include "bogl-font.h"
+ 
+ struct bogl_font *bogl_mmap_font(char *file)
+@@ -20,6 +21,9 @@ struct bogl_font *bogl_mmap_font(char *file)
+   if (fd == -1)
+     return 0;
+ 
++  if (bogl_cloexec(fd) < 0)
++    return 0;
++
+   if (fstat(fd, &buf))
+     return 0;
+ 
+diff --git a/bogl.c b/bogl.c
+index 5b3a9f0..5799073 100644
+--- a/bogl.c
++++ b/bogl.c
+@@ -121,12 +121,16 @@ bogl_init (void)
+     fb = open ("/dev/fb/0", O_RDWR);
+   if (fb < 0)
+     return bogl_fail ("opening /dev/fb0: %s", strerror (errno));
++  if (bogl_cloexec (fb) < 0)
++    return bogl_fail ("setting /dev/fb0 close-on-exec: %s", strerror (errno));
+ 
+   tty = open ("/dev/tty0", O_RDWR);
+   if (tty < 0)
+     tty = open ("/dev/vc/0", O_RDWR);
+   if (tty < 0)
+     return bogl_fail ("opening /dev/tty0: %s", strerror (errno));
++  if (bogl_cloexec (tty) < 0)
++    return bogl_fail ("setting /dev/tty0 close-on-exec: %s", strerror (errno));
+ 
+   if (-1 == ioctl (tty, VT_GETSTATE, &vts))
+     return bogl_fail ("can't get VT state: %s", strerror (errno));
+@@ -627,3 +631,19 @@ bogl_fail (const char *format, ...)
+ 
+   return 0;
+ }
++
++/* Set a file descriptor to close-on-exec. */
++int
++bogl_cloexec(int fd)
++{
++  int flags;
++
++  flags = fcntl (fd, F_GETFD);
++  if (flags < 0)
++    return flags;
++
++  if (fcntl (fd, F_SETFD, flags | FD_CLOEXEC) < 0)
++    return -1;
++
++  return 0;
++}
+diff --git a/boml.c b/boml.c
+index 137a8b9..f22d554 100644
+--- a/boml.c
++++ b/boml.c
+@@ -30,6 +30,7 @@
+ #include <unistd.h>
+ #include <time.h>
+ #include "bogl.h"
++#include "boglP.h"
+ #include "boml.h"
+ 
+ #define M_GPM
+@@ -614,6 +619,10 @@ detect_gpm (void)
+   fd = open ("/dev/gpmdata", O_RDONLY | O_NONBLOCK);
+   if (fd < 0)
+     return 0;
++  if (bogl_cloexec (fd) < 0) {
++    close (fd);
++    return 0;
++  }
+   
+   /* Poll the mouse whether or not we could find gpm, in
+      case it starts up later; but keep searching in that case. */
+@@ -640,6 +649,10 @@ detect_input (void)
+   fd = open("/dev/input/mice", O_RDONLY | O_NONBLOCK);
+   if(fd < 0)
+     return;
++  if (bogl_cloexec(fd) < 0) {
++    close(fd);
++    return;
++  }
+ 
+   add_mouse(T_PS2, fd);
+ }
+@@ -659,6 +672,10 @@ detect_ps2 (void)
+   fd = open ("/dev/psaux", O_RDWR | O_NONBLOCK);
+   if (fd < 0)
+     return;
++  if (bogl_cloexec (fd) < 0) {
++    close (fd);
++    return;
++  }
+ 
+   write (fd, s2, sizeof s2);
+   usleep (30000);
+@@ -695,6 +712,10 @@ detect_msbus (void)
+   int fd = open ("/dev/inportbm", O_RDONLY | O_NONBLOCK);
+   if (fd < 0)
+     return;
++  if (bogl_cloexec (fd) < 0) {
++    close (fd);
++    return;
++  }
+ 
+   add_mouse (T_MS_BUS, fd);
+ }
+@@ -707,6 +728,10 @@ detect_adb (void)
+   int fd = open ("/dev/adbmouse", O_RDONLY | O_NONBLOCK);
+   if (fd < 0)
+     return;
++  if (bogl_cloexec (fd) < 0) {
++    close (fd);
++    return;
++  }
+ 
+   add_mouse (T_ADB, fd);
+ }
+@@ -721,6 +746,10 @@ detect_sun (void)
+   int fd = open ("/dev/sunmouse", O_RDONLY | O_NONBLOCK);
+   if (fd < 0)
+     return;
++  if (bogl_cloexec (fd) < 0) {
++    close (fd);
++    return;
++  }
+ 
+   add_mouse (T_SUN, fd);
+ }
+@@ -978,6 +1007,11 @@ open_serial_port (char *port)
+   fd = open (port, O_RDWR | O_NONBLOCK);
+   if (fd < 0)
+     return fd;
++  if (bogl_cloexec (fd) < 0)
++    {
++      close (fd);
++      return -1;
++    }
+ 
+   /* Reset file so it is no longer in non-blocking mode. */
+   if (fcntl (fd, F_SETFL, 0) < 0)
+diff --git a/boglP.h b/boglP.h
+index 7e024fd..be99979 100644
+--- a/boglP.h
++++ b/boglP.h
+@@ -25,4 +25,6 @@ extern int bogl_line_len;		/* Bytes per scanline. */
+ 
+ int bogl_fail (const char *, ...);
+ 
++int bogl_cloexec (int fd);
++
+ #endif /* boglP_h */

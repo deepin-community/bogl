@@ -1,0 +1,290 @@
+Fix compilation warnings
+
+diff --git a/bogl-cfb.c b/bogl-cfb.c
+index 6c1ddeb..64d7d0f 100644
+--- a/bogl-cfb.c
++++ b/bogl-cfb.c
+@@ -55,7 +55,7 @@ memset_var(void* d, unsigned int c, ssize_t offset, size_t len, size_t b)
+   /* For anything else, assert that we are actually aligned on a pixel
+      boundary, otherwise we are sure to lose */
+   dst = (unsigned char*) d + offset * b / 8;
+-  assert((((unsigned int)dst * 8) % b) == 0);
++  assert((((unsigned long)dst * 8) % b) == 0);
+ 
+   /* Sanity... */
+   assert (b <= 32);
+@@ -79,7 +79,7 @@ memset_var(void* d, unsigned int c, ssize_t offset, size_t len, size_t b)
+ 
+ /*    printf ("Filling %d pixels == %d bytes\n\r", len, len * b / 8); */
+       /* Align to an int boundary */
+-      while ((unsigned int)dst % sizeof(unsigned int))
++      while ((unsigned long)dst % sizeof(unsigned int))
+ 	{
+ /*        printf ("Aligning %d bytes\n\r", (unsigned int)dst % sizeof(unsigned int)); */
+ 	  if (b >= 8)
+diff --git a/bogl-cfb.h b/bogl-cfb.h
+index 8834477..00b393e 100644
+--- a/bogl-cfb.h
++++ b/bogl-cfb.h
+@@ -27,12 +27,12 @@
+ #include <endian.h>
+ 
+ struct bits4 {
+-  unsigned int p0:4 __attribute__ ((packed));
+-  unsigned int p1:4 __attribute__ ((packed));
++  unsigned int p0:4;
++  unsigned int p1:4;
+ } __attribute__ ((packed));
+ 
+ struct bits24 {
+-  unsigned char bytes[3]  __attribute__ ((packed));
++  unsigned char bytes[3];
+ } __attribute__ ((packed));
+ 
+ static inline void
+@@ -93,7 +93,7 @@ memset_24(void* d, unsigned int c, size_t len, size_t b)
+ 	}
+ 
+       /* Align to an int boundary */
+-      while ((unsigned int)dst % sizeof(unsigned int))
++      while ((unsigned long)dst % sizeof(unsigned int))
+ 	{
+ 	  put_var(dst, 0, c, 24);
+ 	  dst += 3;
+diff --git a/bogl-font.c b/bogl-font.c
+index 5dbcec0..8c96a1b 100644
+--- a/bogl-font.c
++++ b/bogl-font.c
+@@ -298,7 +298,7 @@ bogl_read_bdf (char *filename)
+ 	goto lossage;
+       }
+     
+-    cp = strstr (font_name, ".bdf");
++    cp = (unsigned char *) strstr (font_name, ".bdf");
+     if (cp)
+       *cp = 0;
+     for (cp = (unsigned char *) font_name; *cp; cp++)
+diff --git a/bogl-pcfb.c b/bogl-pcfb.c
+index 8a9c274..c737d38 100644
+--- a/bogl-pcfb.c
++++ b/bogl-pcfb.c
+@@ -110,7 +110,7 @@ bogl_pcfb_clear (int x1, int y1, int x2, int y2, int c)
+     return;
+ 
+   bogl_drawing = 1;
+-  dst = (char *) bogl_frame + (y1 * bogl_line_len);
++  dst = (unsigned char *) bogl_frame + (y1 * bogl_line_len);
+   for (; y1 < y2; y1++)
+     {
+       memset_var (dst, cmap_lookup(c), x1, x2 - x1, bpp);
+@@ -282,7 +282,7 @@ bogl_pcfb_pointer (int visible, int x1, int y1,
+ 
+     if (visible)
+       {
+-	char *dst = save;
++	char *dst = (char *) save;
+ 	char *src = (char *) bogl_frame
+ 	  + (sx_ofs * bpp / 8)
+ 	  + (y1 * bogl_line_len);
+@@ -300,7 +300,7 @@ bogl_pcfb_pointer (int visible, int x1, int y1,
+ 	char *dst = (char *) bogl_frame
+ 	  + (sx_ofs * bpp / 8)
+ 	  + (y1 * bogl_line_len);
+-	char *src = save;
++	char *src = (char *) save;
+ 	int y;
+ 	
+ 	for (y = 0; y < y_count; y++)
+@@ -330,7 +330,7 @@ bogl_pcfb_pointer (int visible, int x1, int y1,
+ 	  unsigned short bg_bits, fg_bits;
+ 	  int x;
+ 	  
+-	  dst = (char *) bogl_frame
++	  dst = (unsigned char *) bogl_frame
+ 	    + ((y1 + y) * bogl_line_len);
+ 	  bg_bits = *mask_p ^ *color_p;
+ 	  fg_bits = *mask_p & *color_p;
+diff --git a/bogl-tcfb.c b/bogl-tcfb.c
+index 68c714d..895d298 100644
+--- a/bogl-tcfb.c
++++ b/bogl-tcfb.c
+@@ -137,7 +137,7 @@ bogl_tcfb_clear (int x1, int y1, int x2, int y2, int c)
+     return;
+ 
+   bogl_drawing = 1;
+-  dst = (char *) bogl_frame + (y1 * bogl_line_len);
++  dst = (unsigned char *) bogl_frame + (y1 * bogl_line_len);
+   for (; y1 < y2; y1++)
+     {
+       memset_var (dst, cmap_lookup(c), x1, x2 - x1, bpp);
+@@ -309,7 +309,7 @@ bogl_tcfb_pointer (int visible, int x1, int y1,
+ 
+     if (visible)
+       {
+-	char *dst = save;
++	char *dst = (char *) save;
+ 	char *src = (char *) bogl_frame
+ 	  + (sx_ofs * bpp / 8)
+ 	  + (y1 * bogl_line_len);
+@@ -327,7 +327,7 @@ bogl_tcfb_pointer (int visible, int x1, int y1,
+ 	char *dst = (char *) bogl_frame
+ 	  + (sx_ofs * bpp / 8)
+ 	  + (y1 * bogl_line_len);
+-	char *src = save;
++	char *src = (char *) save;
+ 	int y;
+ 	
+ 	for (y = 0; y < y_count; y++)
+@@ -357,7 +357,7 @@ bogl_tcfb_pointer (int visible, int x1, int y1,
+ 	  unsigned short bg_bits, fg_bits;
+ 	  int x;
+ 	  
+-	  dst = (char *) bogl_frame
++	  dst = (unsigned char *) bogl_frame
+ 	    + ((y1 + y) * bogl_line_len);
+ 	  bg_bits = *mask_p ^ *color_p;
+ 	  fg_bits = *mask_p & *color_p;
+diff --git a/bogl-term.h b/bogl-term.h
+index f1cd743..f6e1571 100644
+--- a/bogl-term.h
++++ b/bogl-term.h
+@@ -5,7 +5,7 @@
+ #include <wchar.h>
+ 
+ struct bogl_term {
+-  const struct bogl_font *font;
++  struct bogl_font *font;
+   int xbase, ybase;
+   int xsize, ysize;
+   int xstep, ystep;
+diff --git a/bogl-vga16.c b/bogl-vga16.c
+index 8880949..bb81803 100644
+--- a/bogl-vga16.c
++++ b/bogl-vga16.c
+@@ -563,7 +563,7 @@ bogl_vga16_pointer (int visible, int x1, int y1,
+       {
+ 	for (plane = 0; plane < 4; plane++)
+ 	  {
+-	    volatile char *dst = saved + plane * 16 * 3;
++	    volatile char *dst = (char *) saved + plane * 16 * 3;
+ 	    volatile char *src = bogl_frame + sx_ofs + y1 * bogl_line_len;
+ 	    int y = y_count;
+ 
+@@ -588,7 +588,7 @@ bogl_vga16_pointer (int visible, int x1, int y1,
+ 	for (plane = 0; plane < 4; plane++)
+ 	  {
+ 	    volatile char *dst = bogl_frame + sx_ofs + y1 * bogl_line_len;
+-	    volatile char *src = saved + plane * 16 * 3;
++	    volatile char *src = (char *) saved + plane * 16 * 3;
+ 	    int y = y_count;
+ 	  
+ 	    set_write_planes (1 << plane);
+diff --git a/boml.c b/boml.c
+index 137a8b9..05b3a97 100644
+--- a/boml.c
++++ b/boml.c
+@@ -127,8 +127,10 @@ static void ps2_driver (struct mouse *);
+ 
+ #define N_DETECT (N_SERIAL + N_MSBUS + N_PS2 + N_ADB + N_SUN)
+ 
++#if N_DETECT > 0
+ /* Detection progress. */
+ static void inc (void);
++#endif
+ 
+ static void (*detect_callback) (int);
+ static int detect_count;
+@@ -323,6 +325,7 @@ boml_init (void (*callback) (int))
+ #endif
+ }
+ 
++#if N_DETECT > 0
+ /* Calls the callback, if any, with a report of the progress of mouse
+    detection in percent, incremented to the next mark (out of N_DETECT
+    marks total). */
+@@ -333,6 +336,7 @@ inc (void)
+   if (detect_callback)
+     detect_callback (100 * detect_count / N_DETECT);
+ }
++#endif
+ 
+ /* Reads mouse activities from the proper port and update the screen
+    pointer position. */
+@@ -1278,7 +1282,7 @@ parse_pnp_string (unsigned char *pnp_id_string, int pnp_len,
+ 
+       int len;
+ 
+-      unsigned char *endfield = strpbrk (++curpos, extension_delims);
++      unsigned char *endfield = (unsigned char *) strpbrk ((char *) ++curpos, extension_delims);
+       if (!endfield)
+ 	return 0;
+ 
+diff --git a/boml.c b/boml.c
+index 137a8b9..05b3a97 100644
+--- a/boml.c
++++ b/boml.c
+@@ -1338,7 +1343,7 @@ parse_pnp_string (unsigned char *pnp_id_string, int pnp_len,
+ 	checksum -= 0x20 * (curpos - start + 1 - 2);
+       
+       sprintf (hex_checksum, "%.2X", checksum & 0xff);
+-      if (strncmp (hex_checksum, curpos, 2))
++      if (strncmp (hex_checksum, (char *) curpos, 2))
+ 	return 0;
+     }
+ 
+@@ -1355,16 +1360,16 @@ guess_mouse_type (struct pnp_com_id *pnp_id)
+     {
+       char *model;
+ 
+-      model = strstr (pnp_id->driver_id, "PNP");
++      model = strstr ((char *) pnp_id->driver_id, "PNP");
+       if (model)
+ 	model += 3;
+       else
+-	model = pnp_id->product_id;
++	model = (char *) pnp_id->product_id;
+ 
+       if (strncmp (model, "0F", 2))
+ 	return -1;
+     }
+-  else if (strcmp (pnp_id->class_name, "MOUSE"))
++  else if (strcmp ((char *) pnp_id->class_name, "MOUSE"))
+     return -1;
+   
+   /* It's a mouse.  Default to Microsoft protocol--most common. */
+@@ -1372,8 +1377,8 @@ guess_mouse_type (struct pnp_com_id *pnp_id)
+ 
+   /* Test for some common mouse types.  Send me more! */
+   {
+-    const char *mfg = pnp_id->manufacturer;
+-    const char *model = pnp_id->product_id;
++    const char *mfg = (char *) pnp_id->manufacturer;
++    const char *model = (char *) pnp_id->product_id;
+     
+     if (!strcmp (mfg, "MSH") && !strcmp (model, "0001"))
+       type = T_MS3_SERIAL;
+diff --git a/bowl.c b/bowl.c
+index da2a3c3..02cd8b5 100644
+--- a/bowl.c
++++ b/bowl.c
+@@ -457,7 +458,7 @@ bowl_refresh (void)
+   bogl_refresh = 0;
+   boml_drawn (0);
+ 
+-  bogl_set_palette (0, 16, palette);
++  bogl_set_palette (0, 16, (const unsigned char (*)[3]) palette);
+   bogl_clear (0, 0, bogl_xres, bogl_yres, wallpaper_color);
+   bogl_put (0, 0, &pixmap_tux75, pix_cmap);
+   bogl_text (55, 0, big_title, (int) strlen (big_title), big_title_color, -1, 0,
+diff --git a/bogl-term.c b/bogl-term.c
+index d840642..1c70bd1 100644
+--- a/bogl-term.c
++++ b/bogl-term.c
+@@ -26,6 +26,7 @@
+ 
+ #include "bogl.h"
+ #include "bogl-term.h"
++#include <string.h>
+ 
+ struct bogl_term *bogl_term_new(struct bogl_font *font)
+ {

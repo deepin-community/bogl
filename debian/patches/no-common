@@ -1,0 +1,66 @@
+---
+ bogl.c |   16 ++++++++++++++++
+ bogl.h |   28 ++++++++++++++--------------
+ 2 files changed, 30 insertions(+), 14 deletions(-)
+
+--- a/bogl.c
++++ b/bogl.c
+@@ -69,6 +69,22 @@ volatile char *bogl_frame;		/* boglP.h *
+ int bogl_drawing;
+ int bogl_line_len;
+ 
++/* Device-specific routines. */
++void (*bogl_pixel) (int x, int y, int c);
++void (*bogl_hline) (int x1, int x2, int y, int c);
++void (*bogl_vline) (int x, int y1, int y2, int c);
++void (*bogl_text) (int x, int y, const char *s, int n, int fg, int bg, int ul,
++ 		   const struct bogl_font *font);
++void (*bogl_clear) (int x1, int y1, int x2, int y2, int c);
++void (*bogl_move) (int sx, int sy, int dx, int dy, int w, int h);
++void (*bogl_put) (int x, int y, const struct bogl_pixmap *pixmap,
++ 		  const int color_map[16]);
++void (*bogl_pointer) (int visible, int x, int y,
++ 		      const struct bogl_pointer *,
++ 		      int colors[2]);
++void (*bogl_set_palette) (int c, int nc, const unsigned char palette[][3]);
++void (*bogl_reinit) (void);
++
+ /* Static variables. */
+ static int fb;			/* Framebuffer file handle. */
+ static int tty;			/* Tty file handle. */
+--- a/bogl.h
++++ b/bogl.h
+@@ -86,19 +86,19 @@ int bogl_font_glyph (const struct bogl_f
+ int bogl_in_font (const struct bogl_font *font, wchar_t wc);
+ 
+ /* Device-specific routines. */
+-void (*bogl_pixel) (int x, int y, int c);
+-void (*bogl_hline) (int x1, int x2, int y, int c);
+-void (*bogl_vline) (int x, int y1, int y2, int c);
+-void (*bogl_text) (int x, int y, const char *s, int n, int fg, int bg, int ul,
+-		   const struct bogl_font *font);
+-void (*bogl_clear) (int x1, int y1, int x2, int y2, int c);
+-void (*bogl_move) (int sx, int sy, int dx, int dy, int w, int h);
+-void (*bogl_put) (int x, int y, const struct bogl_pixmap *pixmap,
+-		  const int color_map[16]);
+-void (*bogl_pointer) (int visible, int x, int y,
+-		      const struct bogl_pointer *,
+-		      int colors[2]);
+-void (*bogl_set_palette) (int c, int nc, const unsigned char palette[][3]);
+-void (*bogl_reinit) (void);
++extern void (*bogl_pixel) (int x, int y, int c);
++extern void (*bogl_hline) (int x1, int x2, int y, int c);
++extern void (*bogl_vline) (int x, int y1, int y2, int c);
++extern void (*bogl_text) (int x, int y, const char *s, int n, int fg, int bg, int ul,
++			  const struct bogl_font *font);
++extern void (*bogl_clear) (int x1, int y1, int x2, int y2, int c);
++extern void (*bogl_move) (int sx, int sy, int dx, int dy, int w, int h);
++extern void (*bogl_put) (int x, int y, const struct bogl_pixmap *pixmap,
++			 const int color_map[16]);
++extern void (*bogl_pointer) (int visible, int x, int y,
++			     const struct bogl_pointer *,
++			     int colors[2]);
++extern void (*bogl_set_palette) (int c, int nc, const unsigned char palette[][3]);
++extern void (*bogl_reinit) (void);
+ 
+ #endif /* bogl_h */

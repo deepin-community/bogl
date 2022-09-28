@@ -1,0 +1,11 @@
+--- a/reduce-font.c
++++ b/reduce-font.c
+@@ -17,7 +17,7 @@ usage (void)
+     printf ("usage: reduce-font <font> < text\n");
+ }
+ 
+-inline size_t
++static inline size_t
+ bits (u_int32_t x)
+ {
+     size_t r;

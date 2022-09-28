@@ -1,0 +1,42 @@
+diff --git a/mergebdf.1 b/mergebdf.1
+new file mode 100644
+index 0000000..6bab521
+--- /dev/null
++++ b/mergebdf.1
+@@ -0,0 +1,8 @@
++.TH "BOGL" "1" "March 2011" "BOGL" "BOGL"
++.SH NAME
++mergebdf \- Merge BDF fonts
++.SH SYNOPSIS
++\fBmergebdf\fR \fIfont1.bdf\fR ... > \fInewfont.bdf\fR
++.SH DESCRIPTION
++.B mergebdf
++merges several BDF fonts into one. There is no option.
+diff --git a/pngtobogl.1 b/pngtobogl.1
+new file mode 100644
+index 0000000..e92849a
+--- /dev/null
++++ b/pngtobogl.1
+@@ -0,0 +1,8 @@
++.TH "BOGL" "1" "March 2011" "BOGL" "BOGL"
++.SH NAME
++pngtobogl \- Convert PNG image to bogl C file
++.SH SYNOPSIS
++\fBpngtobogl\fR \fIgraphic.png\fR > \fIgraphic.c\fR
++.SH DESCRIPTION
++.B pngtobogl
++converts a PNG image into a C file that can be used with the bogl library. There is no option.
+diff --git a/reduce-font.1 b/reduce-font.1
+new file mode 100644
+index 0000000..143d733
+--- /dev/null
++++ b/reduce-font.1
+@@ -0,0 +1,8 @@
++.TH "BOGL" "1" "March 2011" "BOGL" "BOGL"
++.SH NAME
++reduce-font \- reduce a font to a set of glyphs
++.SH SYNOPSIS
++\fBreduce-font\fR \fIfont.bdf\fR < \fItext\fR
++.SH DESCRIPTION
++.B reduce-font
++reduces the content of a font, provided the set of text that will have to be displayed with the reduced font. There is no option.

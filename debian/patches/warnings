@@ -1,0 +1,40 @@
+---
+ bogl-term.c |   13 +++++++------
+ 1 file changed, 7 insertions(+), 6 deletions(-)
+
+--- a/bogl-term.c
++++ b/bogl-term.c
+@@ -27,6 +27,7 @@
+ #include "bogl.h"
+ #include "bogl-term.h"
+ #include <string.h>
++#include <wctype.h>
+ 
+ struct bogl_term *bogl_term_new(struct bogl_font *font)
+ {
+@@ -55,7 +56,7 @@ struct bogl_term *bogl_term_new(struct b
+   term->bold = 0;
+   term->state = 0;
+   term->cur_visible = 1;
+-  memset(&term->ps, 0, sizeof(&term->ps));
++  memset(&term->ps, 0, sizeof(term->ps));
+ 
+   term->screen = malloc(term->xsize * term->ysize * sizeof(wchar_t));
+   term->dirty = malloc(term->xsize * term->ysize);
+@@ -210,11 +211,11 @@ printable (wchar_t wc)
+   return (iswprint(wc) &&
+       /* Invisible characters */
+       (iswspace (wc) ||
+-       !(wc >= 0x2000 && wc <= 0x200F ||
+-         wc >= 0x2028 && wc <= 0x202F ||
+-         wc >= 0x205F && wc <= 0x206F ||
+-         wc == 0xFEFF ||
+-         wc >= 0xE0000 && wc <= 0xE007F)));
++       !((wc >= 0x2000 && wc <= 0x200F) ||
++         (wc >= 0x2028 && wc <= 0x202F) ||
++         (wc >= 0x205F && wc <= 0x206F) ||
++          wc == 0xFEFF ||
++         (wc >= 0xE0000 && wc <= 0xE007F))));
+ }
+ 
+ static void

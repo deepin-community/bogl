@@ -1,0 +1,24 @@
+diff --git a/bogl-cfb.h b/bogl-cfb.h
+index 8834477..d259722 100644
+--- a/bogl-cfb.h
++++ b/bogl-cfb.h
+@@ -41,16 +41,17 @@ put_var (volatile void* dst, size_t off, unsigned int c, size_t b)
+   switch (b)
+       {
+       case 32:
+-	/* FIXME: probably has endianness problems */
++	/* FIXME: has endianness problems */
+ 	((u_int32_t*)(dst))[off] = c;
+ 	break;
+       case 24:
+-	/* FIXME: probably also has endianness problems */
++	/* FIXME: also has endianness problems */
+ 	((struct bits24*)(dst))[off].bytes[2] = (c >> 16);
+ 	((struct bits24*)(dst))[off].bytes[1] = (c >> 8);
+ 	((struct bits24*)(dst))[off].bytes[0] = c;
+ 	break;
+       case 16:
++	/* FIXME: also has endianness problems */
+ 	((unsigned short*)(dst))[off] = c;
+ 	break;
+       case 8:

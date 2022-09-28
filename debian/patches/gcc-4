@@ -1,0 +1,27 @@
+Fix FTBFS with gcc 4.0. Closes: #284741
+
+diff --git a/bogl-font.c b/bogl-font.c
+index 5dbcec0..ef26514 100644
+--- a/bogl-font.c
++++ b/bogl-font.c
+@@ -103,7 +103,7 @@ bogl_read_bdf (char *filename)
+   /* Attempt to malloc NBYTES bytes.  Sets a BOGL error message on
+      failure.  Returns the result of the malloc() operation in any
+      case. */
+-  static void *
++  void *
+   smalloc (size_t nbytes)
+   {
+     void *p = malloc (nbytes);
+diff --git a/boml.c b/boml.c
+index 137a8b9..f716116 100644
+--- a/boml.c
++++ b/boml.c
+@@ -1316,6 +1316,7 @@ parse_pnp_string (unsigned char *pnp_id_string, int pnp_len,
+ 
+ 	default:
+ 	  /* Ignore additional extension fields. */
++	  break;
+ 	}
+ 
+       curpos += len;

@@ -1,0 +1,64 @@
+* Add a SIGTERM signal handler which allows for a graceful exit,
+  restoring the vt state; thanks to Matt Zimmerman <mdz@ubuntu.com>.
+  Closes: #379708.
+
+diff --git a/bterm.c b/bterm.c
+index 0a664f7..cbf69f4 100644
+--- a/bterm.c
++++ b/bterm.c
+@@ -64,6 +64,7 @@ static const unsigned char palette[16][3] =
+ 
+ static int child_pid = 0;
+ static struct termios ttysave;
++static int quit = 0;
+ 
+ /* This first tries the modern Unix98 way of getting a pty, followed by the
+  * old-fashioned BSD way in case that fails. */
+@@ -139,6 +140,11 @@ void sigchld(int sig)
+   signal(SIGCHLD, sigchld);
+ }
+ 
++void sigterm(int sig)
++{
++	quit = 1;
++}
++
+ void spawn_shell(int ptyfd, int ttyfd, const char *command)
+ {
+   fflush(stdout);
+@@ -288,6 +294,7 @@ int main(int argc, char *argv[])
+   spawn_shell(ptyfd, ttyfd, command == NULL ? "/bin/sh" : command);
+ 
+   signal(SIGHUP, reload_font);
++  signal(SIGTERM, sigterm);
+ 
+   ntio = ttysave;
+   ntio.c_lflag &= ~(ECHO|ISIG|ICANON|XCASE);
+@@ -304,6 +311,9 @@ int main(int argc, char *argv[])
+   for (;;) {
+     fd_set fds;
+     int max = 0;
++
++    if (quit)
++	    break;
+     
+     if(pending)
+     {
+@@ -321,6 +331,10 @@ int main(int argc, char *argv[])
+     if (ptyfd > max)
+       max = ptyfd;
+     ret = select(max+1, &fds, NULL, NULL, &tv);
++
++    if (quit)
++	    break;
++
+     if (bogl_refresh) {
+       /* Handle VT switching.  */
+       if (bogl_refresh == 2)
+@@ -360,4 +374,6 @@ int main(int argc, char *argv[])
+       }
+     }
+   }
++
++  return 0;
+ }

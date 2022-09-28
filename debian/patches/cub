@@ -1,0 +1,30 @@
+Support cub=\E[%p1%dD, since tools like busybox seem to be blindly emitting it.
+
+--- a/bogl-term.c
++++ b/bogl-term.c
+@@ -513,6 +513,14 @@ bogl_term_out (struct bogl_term *term, c
+                 continue;
+             }
+ 
++            if (wc == 'D')
++            {                   /* cub=\E[%p1%dD */
++                while (term->xpos && term->arg[0]--)
++                    --term->xpos;
++                term->state = 0;
++                continue;
++            }
++
+             if (wc == 'H')
+             {                   /* home=\E[H, cup=\E[%i%p1%d;%p2%dH */
+                 if (term->state < 3)
+--- a/bterm.ti
++++ b/bterm.ti
+@@ -3,7 +3,7 @@
+ bterm|bogl virtual terminal,
+   cols#80, lines#24,
+   am, bce,
+-  cub1=^H, ind=^J, cr=^M, cud1=^J, nel=^M^J,
++  cub=\E[%p1%dD, cub1=^H, ind=^J, cr=^M, cud1=^J, nel=^M^J,
+   home=\E[H, clear=\E[H\E[2J,
+   cup=\E[%i%p1%d;%p2%dH,
+   ed=\E[J, el=\E[K,

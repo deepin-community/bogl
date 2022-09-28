@@ -1,0 +1,8 @@
+#! /usr/bin/dh-exec
+[linux-any] usr/bin/bdftobogl
+[linux-any] usr/bin/pngtobogl
+usr/bin/mergebdf
+usr/bin/reduce-font
+[linux-any] usr/lib/*/libbogl.a
+[linux-any] usr/lib/*/libbogl.so
+[linux-any] usr/include/bogl/*

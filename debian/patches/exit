@@ -1,0 +1,65 @@
+Return exit code from process and update manpage. (closes: #258650)
+Return 127 on exec errors.
+
+diff --git a/bterm.1 b/bterm.1
+index f80bfbf..8b96b99 100644
+--- a/bterm.1
++++ b/bterm.1
+@@ -45,6 +45,20 @@ different character set than the current locale, will be used inside
+ of
+ .B bterm,
+ it should be specified on the command line.
++.SH EXIT STATUS
++The following exit values are returned:
++.TP
++0
++Successful completion.
++.TP
++1-125
++Exit code from executed program
++.TP
++127
++Failed to exec program
++.TP
++>=128
++Program terminated by signal.
+ .SH NOTES
+ On Debian systems, one appropriate BDF font can be found in the
+ .B bf-utf-source
+diff --git a/bterm.c b/bterm.c
+index 6202592..0a664f7 100644
+--- a/bterm.c
++++ b/bterm.c
+@@ -123,11 +123,18 @@ void send_hangup(void)
+ 
+ void sigchld(int sig)
+ {
+-  if (wait(0) == child_pid) {
++  int status;
++  if (waitpid(child_pid, &status, WNOHANG) > 0) {
+     child_pid = 0;
+     /* Reset ownership and permissions of ttyfd device? */
+     tcsetattr(0, TCSAFLUSH, &ttysave);
+-    exit(0);
++    if (WIFEXITED (status))
++      exit(WEXITSTATUS (status));
++    if (WIFSIGNALED (status))
++      exit(128 + WTERMSIG (status));
++    if (WIFSTOPPED (status))
++      exit(128 + WSTOPSIG (status));
++    exit(status);
+   }
+   signal(SIGCHLD, sigchld);
+ }
+@@ -158,7 +165,7 @@ void spawn_shell(int ptyfd, int ttyfd, const char *command)
+   setuid(getuid());
+ 
+   execl(command, command, NULL);
+-  exit(1);
++  exit(127);
+ }
+ 
+ void set_window_size(int ttyfd, int x, int y)
+
++
++

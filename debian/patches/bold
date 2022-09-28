@@ -1,0 +1,290 @@
+* Support enter_bold_mode. (Closes: #486933).
+  + Thanks to Samuel Thibault for the patch.
+
+diff --git a/bogl-term.c b/bogl-term.c
+index e97d01d..d840642 100644
+--- a/bogl-term.c
++++ b/bogl-term.c
+@@ -27,8 +27,6 @@
+ #include "bogl.h"
+ #include "bogl-term.h"
+ 
+-#define MAX_CCHARS 5
+-
+ struct bogl_term *bogl_term_new(struct bogl_font *font)
+ {
+   struct bogl_term *term;
+@@ -53,6 +51,7 @@ struct bogl_term *bogl_term_new(struct bogl_font *font)
+   term->fg = term->def_fg = 0;
+   term->bg = term->def_bg = 7;
+   term->rev = 0;
++  term->bold = 0;
+   term->state = 0;
+   term->cur_visible = 1;
+   memset(&term->ps, 0, sizeof(&term->ps));
+@@ -62,12 +61,14 @@ struct bogl_term *bogl_term_new(struct bogl_font *font)
+   term->screenfg = malloc(term->xsize * term->ysize * sizeof(int));
+   term->screenbg = malloc(term->xsize * term->ysize * sizeof(int));
+   term->screenul = malloc(term->xsize * term->ysize * sizeof(int));
++  term->screenbd = malloc(term->xsize * term->ysize * sizeof(int));
+   term->cchars = malloc(term->xsize * term->ysize * sizeof(wchar_t *));
+-  if (!term->screen || !term->screenfg || !term->screenbg || !term->screenul || !term->cchars || !term->dirty) {
++  if (!term->screen || !term->screenfg || !term->screenbg || !term->screenul || !term->screenbd || !term->cchars || !term->dirty) {
+     free(term->screen);
+     free(term->screenfg);
+     free(term->screenbg);
+     free(term->screenul);
++    free(term->screenbd);
+     free(term->cchars);
+     free(term->dirty);
+     free(term);
+@@ -78,6 +79,7 @@ struct bogl_term *bogl_term_new(struct bogl_font *font)
+     term->screenfg[i] = term->def_fg;
+     term->screenbg[i] = term->def_bg;
+     term->screenul[i] = 0;
++    term->screenbd[i] = 0;
+     term->cchars[i] = 0;
+     term->dirty[i] = 1;
+   }
+@@ -102,6 +104,8 @@ static int term_match(struct bogl_term *term, int p1, int p2)
+     	return 0;
+     if(term->screenul[p1] != term->screenul[p2])
+     	return 0;
++    if(term->screenbd[p1] != term->screenbd[p2])
++    	return 0;
+     return 1;
+ }
+ 
+@@ -115,6 +119,8 @@ static int term_is_clear(struct bogl_term *term, int p1)
+     	return 0;
+     if(term->screenul[p1] != 0)
+     	return 0;
++    if(term->screenbd[p1] != 0)
++    	return 0;
+     return 1;
+ }
+ 
+@@ -190,6 +196,7 @@ cursor_down (struct bogl_term *term)
+         term->screenfg[p] = term->fg;
+         term->screenbg[p] = term->bg;
+         term->screenul[p] = 0;
++        term->screenbd[p] = 0;
+         term->dirty[p] = 1;
+         free (term->cchars[p]);
+         term->cchars[p] = 0;
+@@ -198,11 +205,14 @@ cursor_down (struct bogl_term *term)
+ 
+ static void
+ put_char (struct bogl_term *term, int x, int y, wchar_t wc, wchar_t *cchars,
+-	  int fg, int bg, int ul)
++	  int fg, int bg, int ul, int bd)
+ {
+     char buf[MB_LEN_MAX];
+     int j, k, r, w;
+ 
++    if (bd)
++        fg += 8;
++
+     wctomb(0, 0);
+     if ((k = wctomb(buf, wc)) == -1)
+         return;
+@@ -212,7 +222,7 @@ put_char (struct bogl_term *term, int x, int y, wchar_t wc, wchar_t *cchars,
+         bogl_text (XPOS(x), YPOS(y), buf, k, fg, bg, ul, term->font);
+ 
+         if (cchars)
+-            for (j = 0; j < MAX_CCHARS && cchars[j]; j++)
++            for (j = 0; cchars[j]; j++)
+             {
+                 wctomb(0, 0);
+                 if ((k = wctomb(buf, cchars[j])) != -1)
+@@ -247,7 +257,7 @@ show_cursor (struct bogl_term *term, int show)
+             fg = term->screenbg[i], bg = term->screenfg[i];
+         else
+             fg = term->screenfg[i], bg = term->screenbg[i];
+-        put_char(term, x, term->ypos, term->screen[i], term->cchars[i], fg, bg, term->screenul[i]);
++        put_char(term, x, term->ypos, term->screen[i], term->cchars[i], fg, bg, term->screenul[i], term->screenbd[i]);
+         term->dirty[SCR(x, term->ypos)] = 1;
+     }
+ }
+@@ -295,6 +305,7 @@ term_clear_one (struct bogl_term *term, int i)
+       term->screenfg[i] = term->fg;
+       term->screenbg[i] = term->bg;
+       term->screenul[i] = 0;
++      term->screenbd[i] = 0;
+     }
+   free (term->cchars[i]);
+   term->cchars[i] = 0;
+@@ -445,6 +456,7 @@ bogl_term_out (struct bogl_term *term, char *s, int n)
+                         term->screenfg[i] = term->fg;
+                         term->screenbg[i] = term->bg;
+                         term->screenul[i] = 0;
++                        term->screenbd[i] = 0;
+                         term->cchars[i] = 0;
+                         term->dirty[i] = 1;
+                     }
+@@ -518,6 +530,7 @@ bogl_term_out (struct bogl_term *term, char *s, int n)
+ 	                    term->screenfg[i] = term->fg;
+ 	                    term->screenbg[i] = term->bg;
+ 	                    term->screenul[i] = 0;
++	                    term->screenbd[i] = 0;
+ 	                }
+                         free (term->cchars[i]);
+                         term->cchars[i] = 0;
+@@ -551,6 +564,7 @@ bogl_term_out (struct bogl_term *term, char *s, int n)
+                             term->screenfg[i] = term->fg;
+                             term->screenbg[i] = term->bg;
+                             term->screenul[i] = 0;
++                            term->screenbd[i] = 0;
+                         }
+                         free (term->cchars[i]);
+                         term->cchars[i] = 0;
+@@ -593,9 +607,12 @@ bogl_term_out (struct bogl_term *term, char *s, int n)
+                     term->rev = 1;
+                 else if (term->arg[0] == 27)
+                     term->rev = 0;
++                else if (term->arg[0] == 1)
++                    term->bold = 1;
+                 else if (term->arg[0] == 0)
+                 {
+                     term->rev = 0;
++                    term->bold = 0;
+                     term->fg = term->def_fg;
+                     term->bg = term->def_bg;
+                 }
+@@ -704,6 +721,7 @@ bogl_term_out (struct bogl_term *term, char *s, int n)
+                             term->screenfg[i] = term->fg;
+                             term->screenbg[i] = term->bg;
+                             term->screenul[i] = 0;
++                            term->screenbd[i] = 0;
+                         }
+                         free (term->cchars[i]);
+                         term->cchars[i] = NULL;
+@@ -720,6 +738,7 @@ bogl_term_out (struct bogl_term *term, char *s, int n)
+                 term->screenfg[i] = f;
+                 term->screenbg[i] = b;
+                 term->screenul[i] = term->ul;
++                term->screenbd[i] = term->bold;
+                 free (term->cchars[i]);
+                 term->cchars[i] = NULL;
+ 
+@@ -730,6 +749,7 @@ bogl_term_out (struct bogl_term *term, char *s, int n)
+                     term->screenfg[i + j] = f;
+                     term->screenbg[i + j] = b;
+                     term->screenul[i + j] = 0;
++                    term->screenbd[i + j] = 0;
+                 }
+ 
+                 if (bogl_in_font (term->font, wc))
+@@ -757,16 +777,38 @@ bogl_term_out (struct bogl_term *term, char *s, int n)
+             if (txp >= 0)
+             {
+                 term->xp = txp;
+-//                bogl_text (XPOS (term->xp), YPOS (term->yp), buf, kk, f, -1, term->ul, term->font);
++//                bogl_text (XPOS (term->xp), YPOS (term->yp), buf, kk, f + (term->bd ? 8 : 0), -1, term->ul, term->font);
+             }
+             else
+             {
+                 clear_left (term);
+-//                bogl_text (XPOS (term->xpos), YPOS (term->ypos), buf, kk, f, b, term->ul, term->font);
++//                bogl_text (XPOS (term->xpos), YPOS (term->ypos), buf, kk, f + (term->bd ? 8 : 0), b, term->ul, term->font);
+                 term->xp = term->xpos, term->yp = term->ypos;
+                 term->xpos += 1;
+                 clear_right (term);
+             }
++	    i = SCR (term->xp, term->yp);
++	    if (bogl_in_font(term->font, wc)) {
++	    	if (term->cchars[i]) {
++		    int ccw = wcslen(term->cchars[i]);
++		    wchar_t *newcchars;
++
++		    newcchars = realloc(term->cchars[i], (ccw+2) * sizeof(wchar_t));
++		    if (newcchars) {
++		    	term->cchars[i] = newcchars;
++			term->cchars[i][ccw] = wc;
++			term->cchars[i][ccw+1] = 0;
++		    }
++	    	}
++		else {
++		    term->cchars[i] = malloc(2 * sizeof(wchar_t));
++		    if (term->cchars[i]) {
++		    	term->cchars[i][0] = wc;
++			term->cchars[i][1] = 0;
++		    }
++		}
++		term->dirty[i] = 1;
++	    }
+         }
+     }
+ 
+@@ -788,7 +830,7 @@ bogl_term_redraw (struct bogl_term *term)
+             i = SCR(x, y);
+             if (term->screen[i] && term->dirty[i])
+             {
+-                put_char(term, x, y, term->screen[i], term->cchars[i], term->screenfg[i], term->screenbg[i], term->screenul[i]);
++                put_char(term, x, y, term->screen[i], term->cchars[i], term->screenfg[i], term->screenbg[i], term->screenul[i], term->screenbd[i]);
+                 term->dirty[i] = 0;
+             }
+         }
+diff --git a/bogl-term.h b/bogl-term.h
+index f1cd743..b3371c5 100644
+--- a/bogl-term.h
++++ b/bogl-term.h
+@@ -13,13 +13,14 @@ struct bogl_term {
+   int def_fg, def_bg;
+   int fg, bg, ul;
+   int rev;
++  int bold;
+   int state;
+   int cur_visible;
+   int xp, yp;
+   int arg[2];
+   mbstate_t ps;
+   wchar_t *screen; /* character in cell, or 0 */
+-  int *screenfg, *screenbg, *screenul; /* colours in cell */
++  int *screenfg, *screenbg, *screenul, *screenbd; /* colours in cell */
+   char *dirty; /* bitmask of dirty chars */
+   wchar_t **cchars; /* combining chars in cell, or 0 */
+   int yorig; /* increment this to scroll */
+diff --git a/bterm.c b/bterm.c
+index cbf69f4..bf2ef7b 100644
+--- a/bterm.c
++++ b/bterm.c
+@@ -47,19 +47,19 @@ static const unsigned char palette[16][3] =
+     {0x00, 0x00, 0x00},	/* 0: Black. */
+     {0xaa, 0x00, 0x00},	/* 1: Red. */
+     {0x00, 0xaa, 0x00},	/* 2: Green. */
+-    {0xaa, 0xaa, 0x00},	/* 3: Yellow. */
++    {0xaa, 0xaa, 0x00},	/* 3: Brown. */
+     {0x00, 0x00, 0xaa},	/* 4: Blue. */
+     {0xaa, 0x00, 0xaa},	/* 5: Magenta. */
+     {0x00, 0xaa, 0xaa},	/* 6: Cyan. */
+-    {0xaa, 0xaa, 0xaa},	/* 7: White. */
+-    {0xff, 0x00, 0x00},	/* 8: Bright red (unused). */
+-    {0x00, 0x00, 0xff},	/* 9: Bright blue (unused). */
+-    {0xa9, 0x99, 0x75},	/* A: Tux #1. */
+-    {0xec, 0xc9, 0x39},	/* B: Tux #2. */
+-    {0x61, 0x52, 0x39},	/* C: Tux #3. */
+-    {0xe4, 0xa8, 0x10},	/* D: Tux #4. */
+-    {0xa0, 0x6d, 0x0c},	/* E: Tux #5. */
+-    {0x38, 0x2e, 0x1e},	/* F: Tux #6. */
++    {0xaa, 0xaa, 0xaa},	/* 7: Light gray. */
++    {0x55, 0x55, 0x55},	/* 0: Light Gray. */
++    {0xff, 0x00, 0x00},	/* 1: Light Red. */
++    {0x00, 0xff, 0x00},	/* 2: Light Green. */
++    {0xff, 0xff, 0x00},	/* 3: Yellow. */
++    {0x00, 0x00, 0xff},	/* 4: Light Blue. */
++    {0xff, 0x00, 0xff},	/* 5: Light Magenta. */
++    {0x00, 0xff, 0xff},	/* 6: Light Cyan. */
++    {0xff, 0xff, 0xff},	/* 7: White. */
+   };
+ 
+ static int child_pid = 0;
+diff --git a/bterm.ti b/bterm.ti
+index 690b82c..0b29318 100644
+--- a/bterm.ti
++++ b/bterm.ti
+@@ -26,3 +26,4 @@ bterm|bogl virtual terminal,
+   khome=\E[1~, kich1=\E[2~, kmous=\E[M, knp=\E[6~, kpp=\E[5~, 
+   kspd=^Z,
+   ri=\EM,
++  bold=\E[1m,

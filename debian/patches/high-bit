@@ -1,0 +1,16 @@
+Fix conversion of lines of glyphs with high bit set
+    
+(Closes: Bug#796034)
+diff --git a/bogl-font.c b/bogl-font.c
+index 5dbcec0..ef26514 100644
+--- a/bogl-font.c
++++ b/bogl-font.c
+@@ -254,7 +254,7 @@ bogl_read_bdf (char *filename)
+ 	  row = font_height - descent - bby - bbh + i;
+ 	  if (row < 0 || row >= font_height)
+ 	    continue;
+-	  bm[row] = strtol (line, NULL, 16) << (32 - 4 * strlen (line) - bbx);
++	  bm[row] = strtoul (line, NULL, 16) << (32 - 4 * strlen (line) - bbx);
+ 	}
+     }
+ 
